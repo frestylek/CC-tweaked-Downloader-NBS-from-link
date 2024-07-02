@@ -13,7 +13,7 @@ until name~= nil
  
 if answer ~= nil and name ~= nil then
   local w = http.get(answer,nil,true)
-  test = fs.open(name .. ".nbs","wb")
+  test = fs.open(name,"wb")
   test.write(w.readAll())
   test.close()
 end
