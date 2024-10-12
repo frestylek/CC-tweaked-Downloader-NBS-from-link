@@ -1,7 +1,7 @@
 local dfpwm = require("cc.audio.dfpwm")
 local speakers = { peripheral.find("speaker") }
 local drive = peripheral.find("drive")
-
+local decoder = dfpwm.make_decoder()
 local json = require("json") -- Upewnij się, że masz zainstalowany ten moduł
 local menu = require "menu"
 
@@ -11,10 +11,11 @@ local selectedSong = nil
 local songs = {}
 local loop = false
 local currentSongIndex = 1
+local quit = false
 
 -- Funkcja do pobierania listy utworów z serwera
 local function fetchSongs()
-    local response = http.get("http://fstandsproject.pl/songs") -- Upewnij się, że endpoint jest poprawny
+    local response = http.get("https://fstandsproject.pl/songs") -- Upewnij się, że endpoint jest poprawny
     if response then
         local responseBody = response.readAll()
         local data, _, err = json.decode(responseBody)
@@ -63,7 +64,7 @@ else
     menu.thread()
 
     if selectedSong ~= nil then
-        uri = "http://fstandsproject.pl/songs/" .. selectedSong
+        uri = "https://fstandsproject.pl/songs/" .. selectedSong
     else 
         error()
     end
@@ -94,9 +95,6 @@ function playChunk(chunk)
 
     return returnValue
 end
-
-
-local quit = false
 
 function play()
     while not quit do
@@ -161,7 +159,9 @@ function readUserInput()
                 uri = "http://fstandsproject.pl/songs/" .. selectedSong
 
                 if uri then
-                    print("Odtwarzanie następnego utworu: " .. selectedSong)
+                    print("Zatrzymanie aktualnego utworu i odtwarzanie następnego: " .. selectedSong)
+                    -- Ustaw flagę quit, aby zatrzymać aktualne odtwarzanie
+                    quit = true
                 else
                     print("Następny utwór nie został znaleziony!")
                 end
@@ -190,16 +190,7 @@ function readUserInput()
 
         if command ~= nil then
             command(table.unpack(cmdargs))
+            if commandName == "next" then
+                return -- Przerwij po przetworzeniu polecenia "next"
+            end
         else 
-            print('to nie jest prawidłowe polecenie!')
-        end
-    end
-end
-
-function waitForQuit()
-    while not quit do
-        sleep(0.1)
-    end
-end
-
-parallel.waitForAny(play, readUserInput, waitForQuit)
