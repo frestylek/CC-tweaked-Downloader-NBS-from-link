@@ -1,7 +1,7 @@
 local dfpwm = require("cc.audio.dfpwm")
 local speakers = { peripheral.find("speaker") }
+local drive = peripheral.find("drive")
 local decoder = dfpwm.make_decoder()
-local http = require("http")
 local json = require("dkjson") -- Upewnij się, że masz zainstalowany ten moduł
 
 local uri = nil
@@ -94,7 +94,6 @@ function playChunk(chunk)
     return returnValue
 end
 
-print("Playing '" .. selectedSong or "unknown" .. "' at volume " .. (volume or 100.0))
 
 local quit = false
 
