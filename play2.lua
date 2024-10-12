@@ -31,7 +31,7 @@ end
 
 -- Pobierz listę utworów
 songs = fetchSongs()
-
+local arg1 = ...
 if #songs == 0 then
     error("ERR - Brak utworów na serwerze.")
 else
@@ -55,13 +55,19 @@ else
         })
     end
 
+
     menu.init({
         main = {
             entries = entries
         }
     })
-
-    menu.thread()
+    if arg1 == true then
+        selectedSong = songs[2]
+        currentSongIndex = 2
+    else
+        menu.thread()
+    end
+    
 
     if selectedSong ~= nil then
         uri = "https://fstandsproject.pl/songs/" .. selectedSong
@@ -122,7 +128,7 @@ function play()
             currentSongIndex = currentSongIndex + 1
 
             if currentSongIndex > #songs then
-                currentSongIndex = 1
+                currentSongIndex = 2
             end
 
             selectedSong = songs[currentSongIndex]
