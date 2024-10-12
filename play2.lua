@@ -1,8 +1,9 @@
 local dfpwm = require("cc.audio.dfpwm")
 local speakers = { peripheral.find("speaker") }
 local drive = peripheral.find("drive")
-local decoder = dfpwm.make_decoder()
-local json = require("dkjson") -- Upewnij się, że masz zainstalowany ten moduł
+
+local json = require("json") -- Upewnij się, że masz zainstalowany ten moduł
+local menu = require "menu"
 
 local uri = nil
 local volume = settings.get("media_center.volume")
