@@ -88,11 +88,11 @@ function playChunk(chunk)
     for i, speaker in pairs(speakers) do
         if i > 1 then
             table.insert(callbacks, function()
-                speaker.playAudio(chunk, volume or 1.0)
+                speaker.playAudio(chunk, 100.0)
             end)
         else
             table.insert(callbacks, function()
-                returnValue = speaker.playAudio(chunk, volume or 1.0)
+                returnValue = speaker.playAudio(chunk, 100.0)
             end)
         end
     end
