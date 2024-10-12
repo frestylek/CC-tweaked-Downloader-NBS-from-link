@@ -35,6 +35,10 @@ local arg1 = ...
 if #songs == 0 then
     error("ERR - Brak utworów na serwerze.")
 else
+    if arg1 == true then
+        selectedSong = songs[1]
+        currentSongIndex = 1
+    else
     local entries = {
         [1] = {
             label = "[CANCEL]",
@@ -61,10 +65,6 @@ else
             entries = entries
         }
     })
-    if arg1 == true then
-        selectedSong = songs[2]
-        currentSongIndex = 2
-    else
         menu.thread()
     end
     
@@ -128,7 +128,7 @@ function play()
             currentSongIndex = currentSongIndex + 1
 
             if currentSongIndex > #songs then
-                currentSongIndex = 2
+                currentSongIndex = 1
             end
 
             selectedSong = songs[currentSongIndex]
