@@ -217,5 +217,5 @@ parallel.waitForAny(play, readUserInput, waitForQuit)
 -- Gdy quit jest ustawiony, rozpocznij odtwarzanie nowego utworu
 if quit then
     quit = false -- Resetuj flagę quit
-    play() -- Rozpocznij odtwarzanie nowego utworu
+    parallel.waitForAny(play, readUserInput, waitForQuit)
 end
