@@ -1,9 +1,8 @@
 local dfpwm = require("cc.audio.dfpwm")
 local speakers = { peripheral.find("speaker") }
-local drive = peripheral.find("drive")
 local decoder = dfpwm.make_decoder()
-
-local menu = require "menu"
+local http = require("http")
+local json = require("dkjson") -- Upewnij się, że masz zainstalowany ten moduł
 
 local uri = nil
 local volume = settings.get("media_center.volume")
@@ -12,59 +11,61 @@ local songs = {}
 local loop = false
 local currentSongIndex = 1
 
-if drive == nil or not drive.isDiskPresent() then
-    songs = fs.list("songs/")
-
-    if #songs == 0 then
-        error("ERR - No disk was found in the drive, or no drive was found. No sound files were found saved to device.")
+-- Funkcja do pobierania listy utworów z serwera
+local function fetchSongs()
+    local response = http.get("http://fstandsproject.pl/songs") -- Upewnij się, że endpoint jest poprawny
+    if response then
+        local responseBody = response.readAll()
+        local data, _, err = json.decode(responseBody)
+        if data and data.files then
+            return data.files
+        else
+            error("Błąd parsowania odpowiedzi: " .. (err or "nieznany błąd"))
+        end
     else
-        local entries = {
-            [1] = {
-                label = "[CANCEL]",
-                callback = function()
-                    error()
-                end
-            }
-        }
-
-        for i, fp in ipairs(songs) do
-            table.insert(entries, {
-                label = fp:match("^([^.]+)"),
-                callback = function()
-                    selectedSong = fp
-                    currentSongIndex = i
-                    menu.exit()
-                end
-            })
-        end
-
-        menu.init({
-            main = {
-                entries = entries
-            }
-        })
-
-        menu.thread()
-
-        if selectedSong ~= nil then
-            local fp = "songs/" .. selectedSong
-
-            if fs.exists(fp) then
-                local file = fs.open(fp, "r")
-                uri = file.readAll()
-                file.close()
-            else
-                print("Song was not found on device!")
-                return
-            end
-        else 
-            error()
-        end
+        error("Błąd w żądaniu do serwera")
     end
+end
+
+-- Pobierz listę utworów
+songs = fetchSongs()
+
+if #songs == 0 then
+    error("ERR - Brak utworów na serwerze.")
 else
-    local songFile = fs.open("disk/song.txt", "r")
-    uri = songFile.readAll()
-    songFile.close()
+    local entries = {
+        [1] = {
+            label = "[CANCEL]",
+            callback = function()
+                error()
+            end
+        }
+    }
+
+    for i, song in ipairs(songs) do
+        table.insert(entries, {
+            label = song:match("^([^.]+)"), -- Usuwa rozszerzenie z nazwy pliku
+            callback = function()
+                selectedSong = song
+                currentSongIndex = i
+                menu.exit()
+            end
+        })
+    end
+
+    menu.init({
+        main = {
+            entries = entries
+        }
+    })
+
+    menu.thread()
+
+    if selectedSong ~= nil then
+        uri = "http://fstandsproject.pl/songs/" .. selectedSong
+    else 
+        error()
+    end
 end
 
 if uri == nil or not uri:find("^https") then
@@ -93,7 +94,7 @@ function playChunk(chunk)
     return returnValue
 end
 
-print("Playing '" .. selectedSong or drive.getDiskLabel() .. "' at volume " .. (volume or 1.0))
+print("Playing '" .. selectedSong or "unknown" .. "' at volume " .. (volume or 100.0))
 
 local quit = false
 
@@ -101,19 +102,24 @@ function play()
     while not quit do
         local response = http.get(uri, nil, true)
 
-        local chunkSize = 4 * 1024
-        local chunk = response.read(chunkSize)
-        while chunk ~= nil do
-            local buffer = decoder(chunk)
+        if response then
+            local chunkSize = 4 * 1024
+            local chunk = response.read(chunkSize)
+            while chunk ~= nil do
+                local buffer = decoder(chunk)
 
-            while not playChunk(buffer) do
-                os.pullEvent("speaker_audio_empty")
+                while not playChunk(buffer) do
+                    os.pullEvent("speaker_audio_empty")
+                end
+
+                chunk = response.read(chunkSize)
             end
-
-            chunk = response.read(chunkSize)
+        else
+            print("Błąd podczas odtwarzania utworu!")
+            return
         end
 
-        -- After song finishes, check if loop is enabled or move to next song
+        -- Po zakończeniu utworu, sprawdź, czy włączono pętlę, lub przejdź do następnego utworu
         if not loop then
             currentSongIndex = currentSongIndex + 1
 
@@ -122,14 +128,12 @@ function play()
             end
 
             selectedSong = songs[currentSongIndex]
-            local fp = "songs/" .. selectedSong
+            uri = "http://fstandsproject.pl/songs/" .. selectedSong
 
-            if fs.exists(fp) then
-                local file = fs.open(fp, "r")
-                uri = file.readAll()
-                file.close()
+            if uri then
+                print("Odtwarzanie następnego utworu: " .. selectedSong)
             else
-                print("Next song was not found!")
+                print("Następny utwór nie został znaleziony!")
                 return
             end
         end
@@ -143,7 +147,7 @@ function readUserInput()
         end,
         ["loop"] = function()
             loop = not loop
-            print(loop and "Loop is ON" or "Loop is OFF")
+            print(loop and "Pętla jest WŁĄCZONA" or "Pętla jest WYŁĄCZONA")
         end,
         ["next"] = function()
             if not loop then
@@ -154,18 +158,15 @@ function readUserInput()
                 end
 
                 selectedSong = songs[currentSongIndex]
-                local fp = "songs/" .. selectedSong
+                uri = "http://fstandsproject.pl/songs/" .. selectedSong
 
-                if fs.exists(fp) then
-                    local file = fs.open(fp, "r")
-                    uri = file.readAll()
-                    file.close()
-                    print("Playing next song: " .. selectedSong)
+                if uri then
+                    print("Odtwarzanie następnego utworu: " .. selectedSong)
                 else
-                    print("Next song was not found!")
+                    print("Następny utwór nie został znaleziony!")
                 end
             else
-                print("Cannot skip songs while in loop mode.")
+                print("Nie można przeskakiwać utworów w trybie pętli.")
             end
         end
     }
@@ -182,6 +183,7 @@ function readUserInput()
             else
                 commandName = word
             end
+            i = i + 1
         end
 
         local command = commands[commandName]
@@ -189,7 +191,7 @@ function readUserInput()
         if command ~= nil then
             command(table.unpack(cmdargs))
         else 
-            print('is not a valid command!')
+            print('to nie jest prawidłowe polecenie!')
         end
     end
 end
