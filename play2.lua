@@ -189,7 +189,7 @@ function readUserInput()
         if command ~= nil then
             command(table.unpack(cmdargs))
         else 
-            print('"' .. cmdargs[1] .. '" is not a valid command!')
+            print('is not a valid command!')
         end
     end
 end
