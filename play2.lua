@@ -194,3 +194,22 @@ function readUserInput()
                 return -- Przerwij po przetworzeniu polecenia "next"
             end
         else 
+            print('to nie jest prawidłowe polecenie!')
+        end
+    end
+end
+
+function waitForQuit()
+    while not quit do
+        sleep(0.1)
+    end
+end
+
+-- Wykonaj odtwarzanie i wczytywanie komend w równoległych wątkach
+parallel.waitForAny(play, readUserInput, waitForQuit)
+
+-- Gdy quit jest ustawiony, rozpocznij odtwarzanie nowego utworu
+if quit then
+    quit = false -- Resetuj flagę quit
+    play() -- Rozpocznij odtwarzanie nowego utworu
+end
