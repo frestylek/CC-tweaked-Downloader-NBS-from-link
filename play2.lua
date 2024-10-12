@@ -35,7 +35,7 @@ local arg1 = ...
 if #songs == 0 then
     error("ERR - Brak utworów na serwerze.")
 else
-    if arg1 == true then
+    if arg1 == "true" then
         selectedSong = songs[1]
         currentSongIndex = 1
     else
